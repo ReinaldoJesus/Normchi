@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Pencil } from "lucide-react";
+import { ArrowRight, Pencil } from "lucide-react";
 
 import { BotonCambiarEstado } from "@/components/boton-cambiar-estado";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +54,7 @@ export function ProductosTable({ filas }: { filas: FilaProducto[] }) {
             <TableHead className="text-right">Costo teórico</TableHead>
             <TableHead className="text-right">Margen</TableHead>
             <TableHead className="text-right">Food cost</TableHead>
-            <TableHead className="w-24" />
+            <TableHead className="w-44" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -98,7 +98,7 @@ export function ProductosTable({ filas }: { filas: FilaProducto[] }) {
                   )}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center justify-end gap-1">
+                  <div className="flex items-center justify-end gap-1.5">
                     <ProductoForm
                       producto={f.form}
                       trigger={
@@ -107,9 +107,15 @@ export function ProductosTable({ filas }: { filas: FilaProducto[] }) {
                         </Button>
                       }
                     />
-                    <Button variant="ghost" size="icon" className="size-7" asChild>
+                    <Button
+                      variant={f.tieneReceta ? "secondary" : "default"}
+                      size="sm"
+                      className="h-7 px-2.5 text-xs"
+                      asChild
+                    >
                       <Link href={`/recetas/${f.id}`}>
-                        <ChevronRight className="size-3.5" />
+                        {f.tieneReceta ? "Ver receta" : "Armar receta"}
+                        <ArrowRight className="size-3.5" />
                       </Link>
                     </Button>
                     <BotonCambiarEstado
