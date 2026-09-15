@@ -6,7 +6,7 @@ import { LoginForm } from "./login-form";
 export default async function LoginPage(props: PageProps<"/login">) {
   const searchParams = await props.searchParams;
   const sesion = await obtenerSesion();
-  if (sesion) redirect("/");
+  if (sesion) redirect("/dashboard");
 
   const desde = typeof searchParams.desde === "string" ? searchParams.desde : undefined;
 

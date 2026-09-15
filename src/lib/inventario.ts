@@ -14,18 +14,15 @@ import { ErrorValidacion } from "@/lib/apiAuth";
 const FECHA_APERTURA = "2020-01-01";
 
 /**
- * Reconstruye el ledger completo desde cero (§6.3) a partir de todas las
- * compras recibidas, ajustes y ventas actuales en la base de datos, y
- * reemplaza `movimientos_inventario` con el resultado.
- *
- * Disparadores: crear, editar, anular o borrar cualquier compra, venta o
- * ajuste. En el volumen de datos de un restaurante esto toma milisegundos;
- * no se optimiza de forma incremental (regla explícita de la especificación).
- *
- * También sirve como el comando `recalcular-inventario` (arquitectura no
- * negociable §4): reconstruye la tabla materializada desde cero.
+ * Recalcula el ledger completo (§6.3) a partir de todas las compras
+ * recibidas, ajustes y ventas actuales en la base de datos — **sin
+ * persistir**. Es la misma función pura (`recalcularLedger`, en
+ * `@/lib/motor/ledger`) que usa `recalcularInventarioCompleto()`; existe por
+ * separado para consumidores de solo lectura (ej. el Dashboard, que necesita
+ * `cogsPorDiaProducto` — el costo real por día y producto que resuelve el
+ * motor del ledger — sin tocar `movimientos_inventario`).
  */
-export async function recalcularInventarioCompleto(): Promise<ResultadoLedger> {
+export async function calcularLedgerActual(): Promise<ResultadoLedger> {
   const [insumos, compraLineas, ajustes, ventaLineas, recetaLineas] =
     await Promise.all([
       prisma.insumo.findMany({
@@ -59,7 +56,7 @@ export async function recalcularInventarioCompleto(): Promise<ResultadoLedger> {
       }),
     ]);
 
-  const resultado = recalcularLedger({
+  return recalcularLedger({
     fechaApertura: FECHA_APERTURA,
     insumos: insumos.map((i) => ({
       insumoId: i.id,
@@ -98,6 +95,21 @@ export async function recalcularInventarioCompleto(): Promise<ResultadoLedger> {
       mermaPct: Number(l.insumo.mermaPct),
     })),
   });
+}
+
+/**
+ * Reconstruye el ledger completo desde cero (§6.3) y reemplaza
+ * `movimientos_inventario` con el resultado.
+ *
+ * Disparadores: crear, editar, anular o borrar cualquier compra, venta o
+ * ajuste. En el volumen de datos de un restaurante esto toma milisegundos;
+ * no se optimiza de forma incremental (regla explícita de la especificación).
+ *
+ * También sirve como el comando `recalcular-inventario` (arquitectura no
+ * negociable §4): reconstruye la tabla materializada desde cero.
+ */
+export async function recalcularInventarioCompleto(): Promise<ResultadoLedger> {
+  const resultado = await calcularLedgerActual();
 
   await prisma.$transaction([
     prisma.movimientoInventario.deleteMany({}),

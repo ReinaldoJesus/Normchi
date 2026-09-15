@@ -18,7 +18,7 @@ export function LoginForm({ desde }: { desde?: string }) {
       const resultado = await iniciarSesion(estado, formData);
       setEstado(resultado);
       if (resultado.ok) {
-        router.push(desde || "/");
+        router.push(desde || "/dashboard");
         router.refresh();
       }
     });

@@ -10,7 +10,7 @@ import { ParametrosForm } from "./parametros-form";
 
 export default async function ParametrosPage() {
   const sesion = await obtenerSesion();
-  if (!sesion || sesion.rol !== "admin") redirect("/");
+  if (!sesion || sesion.rol !== "admin") redirect("/dashboard");
 
   const parametros = await obtenerParametros();
 

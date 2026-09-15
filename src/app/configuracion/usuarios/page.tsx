@@ -11,7 +11,7 @@ import { UsuariosTable, type FilaUsuario } from "./usuarios-table";
 
 export default async function UsuariosPage() {
   const sesion = await obtenerSesion();
-  if (!sesion || sesion.rol !== "admin") redirect("/");
+  if (!sesion || sesion.rol !== "admin") redirect("/dashboard");
 
   const usuarios = await listarUsuarios();
 

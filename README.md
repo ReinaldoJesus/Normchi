@@ -27,6 +27,8 @@ Las Fases 1 a 3 del plan de entrega (§10 de la especificación) están
 
 | Módulo | Estado | Ruta |
 |---|---|---|
+| **Dashboard** (§7.2): KPIs con selector de período, desglose comida/bebida y mix, gráfico ventas real+pronóstico, alertas accionables — primera pantalla tras el login | ✅ | `/dashboard` |
+| Panel (guía de tres pasos para una instalación nueva) | ✅ | `/` |
 | Insumos (materias primas, unidad base + unidad de compra + factor de conversión) | ✅ | `/insumos` |
 | Proveedores | ✅ | `/configuracion/proveedores` |
 | Recetas (BOM) con costeo en vivo y semáforo de food cost | ✅ | `/recetas` |
@@ -93,7 +95,9 @@ proyectada) está implementada como **funciones puras y testeadas** en
   (`src/lib/inventario.ts`) borra y reconstruye toda la tabla
   `movimientos_inventario` desde compras/ventas/ajustes cada vez que algo
   cambia — sin actualizaciones incrementales, por requerimiento explícito de
-  la especificación (§6.3).
+  la especificación (§6.3). `calcularLedgerActual()` es el mismo cálculo
+  **sin persistir** — lo usa el Dashboard para leer `cogsPorDiaProducto` (el
+  costo real de venta por día y producto) sin tocar la base de datos.
 - **Manejo de fechas — cuidado aquí**: `src/lib/fechas.ts` tiene dos
   funciones que NO son intercambiables. `toFechaLocal()` hace conversión real
   de zona horaria (para timestamps reales); `toFechaCalendario()` extrae la

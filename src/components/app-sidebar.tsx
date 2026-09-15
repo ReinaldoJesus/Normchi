@@ -7,6 +7,7 @@ import {
   CalendarClock,
   ChefHat,
   LayoutDashboard,
+  LayoutGrid,
   Package,
   Receipt,
   Settings,
@@ -30,7 +31,7 @@ import { NavUsuario } from "@/components/nav-usuario";
 import type { SesionUsuario } from "@/lib/sesion";
 
 const NAV = [
-  { href: "/", label: "Panel", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/insumos", label: "Insumos", icon: Package },
   { href: "/recetas", label: "Recetas", icon: ChefHat },
   { href: "/compras", label: "Compras", icon: ShoppingCart },
@@ -46,7 +47,7 @@ export function AppSidebar({ sesion }: { sesion: SesionUsuario | null }) {
   return (
     <Sidebar>
       <SidebarHeader className="px-3 py-4">
-        <Link href="/" className="flex items-center gap-2 px-2">
+        <Link href="/dashboard" className="flex items-center gap-2 px-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
             N
           </span>
@@ -60,10 +61,7 @@ export function AppSidebar({ sesion }: { sesion: SesionUsuario | null }) {
           <SidebarGroupContent>
             <SidebarMenu>
               {NAV.map((item) => {
-                const activo =
-                  item.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(item.href);
+                const activo = pathname.startsWith(item.href);
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={activo}>
@@ -82,7 +80,15 @@ export function AppSidebar({ sesion }: { sesion: SesionUsuario | null }) {
       <SidebarFooter className="px-1 pb-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname.startsWith("/configuracion")}>
+            <SidebarMenuButton asChild size="sm" isActive={pathname === "/"}>
+              <Link href="/">
+                <LayoutGrid />
+                <span>Panel</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild size="sm" isActive={pathname.startsWith("/configuracion")}>
               <Link href="/configuracion">
                 <Settings />
                 <span>Configuración</span>
