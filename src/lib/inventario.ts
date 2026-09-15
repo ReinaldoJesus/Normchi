@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { toFechaCalendario } from "@/lib/fechas";
 import { cantidadBaseDesdeCompra, costoPorUnidadBase } from "@/lib/motor/unidades";
 import { recalcularLedger, type ResultadoLedger } from "@/lib/motor/ledger";
+import { obtenerUsuarioActualId } from "@/lib/usuarioActual";
+import { ajusteFormSchema, type AjusteFormValues } from "@/lib/validaciones/ajuste";
+import { ErrorValidacion } from "@/lib/apiAuth";
 
 /**
  * Fecha de apertura del inventario: anterior a cualquier evento real posible.
@@ -157,4 +160,65 @@ export async function obtenerEstadoInsumos(): Promise<Map<number, EstadoInsumo>>
   }
 
   return mapa;
+}
+
+const TAMANO_PAGINA_MOVIMIENTOS = 50;
+
+export async function listarInsumosBasico() {
+  return prisma.insumo.findMany({
+    orderBy: { nombre: "asc" },
+    select: { id: true, nombre: true, unidadBase: true },
+  });
+}
+
+export async function listarMovimientos(insumoId: number | null, pagina: number) {
+  const [total, movimientos] = await Promise.all([
+    prisma.movimientoInventario.count({ where: insumoId ? { insumoId } : undefined }),
+    prisma.movimientoInventario.findMany({
+      where: insumoId ? { insumoId } : undefined,
+      include: { insumo: { select: { nombre: true, unidadBase: true } } },
+      orderBy: [{ fecha: "desc" }, { secuencia: "desc" }, { id: "desc" }],
+      skip: (pagina - 1) * TAMANO_PAGINA_MOVIMIENTOS,
+      take: TAMANO_PAGINA_MOVIMIENTOS,
+    }),
+  ]);
+  // id/origenId son BigInt en la base — no serializan en JSON (API) ni cruzan
+  // el límite server/client de React sin convertir primero a string.
+  const movimientosSerializables = movimientos.map((m) => ({
+    ...m,
+    id: m.id.toString(),
+    origenId: m.origenId.toString(),
+  }));
+  return {
+    movimientos: movimientosSerializables,
+    totalPaginas: Math.max(1, Math.ceil(total / TAMANO_PAGINA_MOVIMIENTOS)),
+  };
+}
+
+export async function listarAjustesRecientes() {
+  return prisma.ajusteInventario.findMany({
+    include: { insumo: { select: { nombre: true, unidadBase: true } }, usuario: true },
+    orderBy: { fecha: "desc" },
+    take: 20,
+  });
+}
+
+export async function crearAjuste(datos: AjusteFormValues) {
+  const parsed = ajusteFormSchema.safeParse(datos);
+  if (!parsed.success) throw new ErrorValidacion(parsed.error.flatten().fieldErrors);
+
+  const usuarioId = await obtenerUsuarioActualId();
+
+  await prisma.ajusteInventario.create({
+    data: {
+      fecha: new Date(parsed.data.fecha),
+      insumoId: parsed.data.insumoId,
+      cantidadDelta: parsed.data.cantidadDelta,
+      motivo: parsed.data.motivo,
+      nota: parsed.data.nota || null,
+      usuarioId,
+    },
+  });
+
+  await recalcularInventarioCompleto();
 }

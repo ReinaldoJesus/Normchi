@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { NOMBRE_COOKIE_SESION, verificarTokenSesion } from "@/lib/sesion";
 
-const RUTAS_PUBLICAS = ["/login"];
+const RUTAS_PUBLICAS = ["/login", "/api/auth/login"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -16,6 +16,9 @@ export async function proxy(request: NextRequest) {
   const sesion = token ? await verificarTokenSesion(token) : null;
 
   if (!sesion) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
     const url = new URL("/login", request.url);
     if (pathname !== "/") url.searchParams.set("desde", pathname);
     return NextResponse.redirect(url);

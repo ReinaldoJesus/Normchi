@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/table";
 import { formatearCantidad, formatearPorcentaje } from "@/lib/formato";
 import type { NivelConfianza, PuntoPronostico } from "@/lib/motor/pronostico";
-import { crearOverride } from "./actions";
+import { crearOverride } from "@/lib/api/planificacion";
 
 export interface FilaPronostico {
   productoId: number;

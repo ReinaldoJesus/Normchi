@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatearPesos } from "@/lib/formato";
-import type { ResumenCategoria, ResumenCierreDia } from "./actions";
+import type { ResumenCategoria, ResumenCierreDia } from "@/lib/services/ventas";
 
 export function ResumenDia({
   resumen,

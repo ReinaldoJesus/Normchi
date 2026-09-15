@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatearPesos } from "@/lib/formato";
-import { actualizarCompra, crearCompra } from "./actions";
+import { actualizarCompra, crearCompra } from "@/lib/api/compras";
 
 interface Proveedor {
   id: number;

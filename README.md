@@ -37,6 +37,7 @@ Las Fases 1 a 3 del plan de entrega (§10 de la especificación) están
 | Reportería (menu engineering, gasto en compras, márgenes, utilidad proyectada) | ✅ | `/reportes` |
 | Parámetros del sistema (IVA, horizonte, capacidad de cocina, etc. — editables sin tocar código) | ✅ | `/configuracion/parametros` |
 | Login y gestión de usuarios (roles admin/compras/cocina/cajero/lectura) | ✅ | `/login`, `/configuracion/usuarios` |
+| **API HTTP propia** — cada módulo lee/escribe a través de `/api/**`, no de Server Actions | ✅ | ver sección **API** más abajo |
 
 Toda la lógica de negocio normativa de la especificación (§6: conversión de
 unidades, costo medio móvil ponderado, ledger, backflush, costeo de recetas,
@@ -111,6 +112,68 @@ proyectada) está implementada como **funciones puras y testeadas** en
   dimensionarlo al label más largo, o usar `formatearPesosCompacto()` de
   `src/lib/formato.ts` para ejes de plata.
 
+## API
+
+Normchi es **API first**: toda lectura estructurada y toda escritura pasa por
+una API HTTP propia bajo `/api/**` (Next.js Route Handlers) — no quedan
+Server Actions en el proyecto. Esto significa que, si más adelante se necesita
+otro cliente (una app móvil, un script de reportes, una integración con un
+POS), ya existe una API real contra la cual construir.
+
+**Arquitectura de tres capas**, la misma en cada módulo:
+
+1. **`src/lib/services/<modulo>.ts`** (o directamente en `src/lib/<modulo>.ts`
+   para los módulos que ya tenían una capa de datos, como `inventario.ts`,
+   `parametros.ts`, `planificacion.ts`, `reportes.ts`): funciones `async` de
+   servidor con la lógica real (Prisma, reglas de negocio). Lanzan `ErrorApi`,
+   `ErrorCampo` o `ErrorValidacion` (`src/lib/apiAuth.ts`) sobre condiciones de
+   error — nunca devuelven un shape `{ok, mensaje}` ellas mismas.
+2. **`src/app/api/**/route.ts`**: valida sesión (`exigirSesion()` /
+   `exigirAdmin()`), valida el body con el mismo esquema Zod de
+   `src/lib/validaciones/*.ts`, llama al servicio, traduce cualquier error con
+   `manejarErrorApi()` a la respuesta JSON correspondiente (`401`/`403`/`400`/
+   `404`/`500`).
+3. **`src/lib/api/<modulo>.ts`** (cliente, se importa desde componentes
+   `"use client"`): funciones `async` con la **misma firma** que tenía la
+   Server Action que reemplazan (para que el componente no cambie), que hacen
+   `fetch()` contra la ruta y devuelven el mismo shape `EstadoFormulario*` /
+   `Resultado*` que ya consumían los formularios.
+
+Los **Server Components** (`page.tsx`) no llaman a la API por HTTP —
+llaman directo a la función del servicio (sería un round-trip inútil dentro
+del mismo proceso). La API y el render del servidor comparten exactamente la
+misma función, así que nunca hay dos implementaciones de la misma lectura.
+
+**Autenticación de la API**: la misma cookie de sesión que usa el resto de la
+app (`src/lib/sesion.ts`/`auth.ts`) — no hay tokens Bearer. `src/proxy.ts`
+devuelve `401` en JSON (no redirige a `/login`) si `pathname` empieza con
+`/api/` y no hay sesión; cada route handler además vuelve a llamar
+`exigirSesion()`/`exigirAdmin()` por su cuenta, nunca confía solo en el proxy.
+
+**Convención**: `GET/POST /api/<recurso>`, `GET/PATCH /api/<recurso>/[id]`,
+sub-rutas de acción para transiciones que no son un CRUD plano (ej.
+`/api/compras/[id]/recepcion`). No hay `DELETE` — ningún módulo borra
+físicamente, todo es `activo: false` o un estado (`anulada`, etc.).
+
+| Módulo | Endpoints |
+|---|---|
+| Auth | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/sesion` |
+| Insumos | `GET/POST /api/insumos`, `PATCH /api/insumos/[id]` (edición completa o `{activo}` para activar/desactivar) |
+| Proveedores | `GET/POST /api/proveedores`, `PATCH /api/proveedores/[id]` |
+| Recetas (productos) | `GET/POST /api/productos`, `GET/PATCH /api/productos/[id]`, `PUT /api/productos/[id]/receta`, `POST /api/productos/[id]/duplicar` |
+| Compras | `GET/POST /api/compras`, `GET/PATCH /api/compras/[id]`, `POST /api/compras/[id]/enviar`, `POST /api/compras/[id]/recepcion`, `POST /api/compras/[id]/anular` |
+| Inventario | `GET /api/inventario/movimientos`, `GET/POST /api/inventario/ajustes`, `POST /api/inventario/recalcular` |
+| Ventas | `GET/POST /api/ventas` (cierre de día), `GET /api/ventas/historial`, `POST /api/ventas/dia-sin-operacion`, `POST /api/ventas/reabrir`, `POST /api/ventas/importar` |
+| Planificación | `GET /api/planificacion?horizonte=14` (pronóstico + MRP + carga de cocina), `POST /api/planificacion/overrides`, `DELETE /api/planificacion/overrides/[id]`, `POST /api/planificacion/generar-orden` |
+| Reportes | `GET /api/reportes/{menu-engineering,gasto-compras,cobertura,costo-insumos,merma,mix-evolucion}` |
+| Parámetros | `GET/PATCH /api/parametros` (admin) |
+| Usuarios | `GET/POST /api/usuarios`, `PATCH /api/usuarios/[id]`, `POST /api/usuarios/[id]/estado` (admin) |
+
+**Pendiente / fuera de alcance de la API**: no hay tokens Bearer (solo cookie
+de sesión, pensado para el propio navegador); no hay documentación
+OpenAPI/Swagger; los permisos son binarios (admin vs. cualquier autenticado),
+no la matriz granular por rol del §5.2.
+
 ## Puesta en marcha (primera vez en una máquina nueva)
 
 ### Requisitos
@@ -177,29 +240,38 @@ normchi-especificacion.md   Especificación funcional — fuente de verdad
 prisma/
   schema.prisma              Modelo de datos completo
   seed.ts                    Crea el usuario admin inicial
-src/proxy.ts                 Protege toda la app: sin sesión, redirige a /login
+src/proxy.ts                 Protege toda la app: sin sesión, 401 (API) o redirige a /login (páginas)
 src/lib/
   motor/                     Lógica de negocio pura + tests (unidades, costo
                              medio, ledger, backflush, recetas, pronóstico,
                              MRP, cocina, menu engineering, utilidad)
+  services/                  Escrituras por módulo (insumos, productos,
+                             compras, usuarios, auth, proveedores) — llamadas
+                             por los route handlers y por los Server Components
+  api/                       Cliente HTTP por módulo, mismo import que antes
+                             usaban los componentes para la Server Action
+  apiAuth.ts                 exigirSesion/exigirAdmin, ErrorApi/ErrorCampo/
+                             ErrorValidacion, manejarErrorApi
   parametros.ts              Lectura/escritura de la tabla `parametros`
-  inventario.ts              Reconstrucción del ledger + estado de insumos
-  planificacion.ts           Series históricas para el pronóstico
-  reportes.ts                Consultas agregadas para /reportes
+  inventario.ts              Ledger completo: reconstrucción, lecturas y
+                             escrituras (ajustes, recalculo manual)
+  planificacion.ts           Series históricas + orquestación completa de
+                             pronóstico/MRP/carga de cocina + overrides
+  reportes.ts                Consultas agregadas para /reportes y su API
   fechas.ts                  toFechaLocal vs toFechaCalendario (ver arriba)
   sesion.ts                  Firma/verifica el JWT — sin next/headers, la usa
                              también el proxy
   auth.ts / senas.ts         Sesión (cookie) + hash de contraseña
   usuarioActual.ts           Id del usuario autenticado (para auditoría)
 src/app/
+  api/                       Route Handlers — ver sección API arriba
   login/                     Pantalla de login
   insumos/ recetas/ compras/ ventas/ inventario/
   planificacion/ reportes/ configuracion/    Una carpeta por módulo (Next.js
-                                              App Router: page.tsx + acciones
-                                              de servidor + componentes);
-                                              configuracion/usuarios y
-                                              configuracion/parametros exigen
-                                              rol admin
+                                              App Router: page.tsx + componentes,
+                                              ya sin actions.ts); configuracion/
+                                              usuarios y configuracion/parametros
+                                              exigen rol admin
 ```
 
 ## Si retomas esto sin este contexto
@@ -210,5 +282,6 @@ src/app/
    confirmar que partes de una base sana.
 3. Lo próximo que probablemente falte, en orden de prioridad: permisos
    granulares por rol en cada módulo (§5.2 — hoy solo Usuarios/Parámetros
-   están restringidos a admin), Configuración → Respaldo, y el seed de datos
-   de demostración de la §8.
+   están restringidos a admin), Configuración → Respaldo, el seed de datos
+   de demostración de la §8, y documentación OpenAPI de `/api/**` si se llega
+   a necesitar un cliente externo real.

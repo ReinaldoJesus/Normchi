@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ import {
   actualizarUsuario,
   crearUsuario,
   type EstadoFormularioUsuario,
-} from "./actions";
+} from "@/lib/api/usuarios";
 
 export interface UsuarioParaEditar {
   id: string;
@@ -43,6 +44,7 @@ export function UsuarioForm({
   usuario?: UsuarioParaEditar;
   trigger?: React.ReactNode;
 }) {
+  const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [estado, setEstado] = useState<EstadoFormularioUsuario>({ ok: false });
   const [enviando, startTransition] = useTransition();
@@ -55,7 +57,10 @@ export function UsuarioForm({
         ? await actualizarUsuario(usuario!.id, estado, formData)
         : await crearUsuario(estado, formData);
       setEstado(resultado);
-      if (resultado.ok) setAbierto(false);
+      if (resultado.ok) {
+        setAbierto(false);
+        router.refresh();
+      }
     });
   }
 

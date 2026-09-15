@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import {
   actualizarProveedor,
   crearProveedor,
   type EstadoFormularioProveedor,
-} from "./actions";
+} from "@/lib/api/proveedores";
 
 export interface ProveedorParaEditar {
   id: number;
@@ -38,6 +39,7 @@ export function ProveedorForm({
   proveedor?: ProveedorParaEditar;
   trigger?: React.ReactNode;
 }) {
+  const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [estado, setEstado] = useState<EstadoFormularioProveedor>({ ok: false });
   const [enviando, startTransition] = useTransition();
@@ -50,7 +52,10 @@ export function ProveedorForm({
         ? await actualizarProveedor(proveedor!.id, estado, formData)
         : await crearProveedor(estado, formData);
       setEstado(resultado);
-      if (resultado.ok) setAbierto(false);
+      if (resultado.ok) {
+        setAbierto(false);
+        router.refresh();
+      }
     });
   }
 

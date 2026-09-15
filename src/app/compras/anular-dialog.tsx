@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { anularCompra } from "./actions";
+import { anularCompra } from "@/lib/api/compras";
 
 export function AnularDialog({ compraId }: { compraId: number }) {
   const router = useRouter();

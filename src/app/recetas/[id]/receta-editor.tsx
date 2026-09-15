@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { formatearCantidad, formatearPesos, formatearPorcentaje } from "@/lib/formato";
 import { costearProducto, type SemaforoFoodCost } from "@/lib/motor/recetas";
-import { duplicarReceta, guardarReceta } from "../actions";
+import { duplicarReceta, guardarReceta } from "@/lib/api/productos";
 
 interface InsumoDisponible {
   id: number;
@@ -124,6 +124,7 @@ export function RecetaEditor({
         validas.map((l) => ({ insumoId: l.insumoId, cantidad: l.cantidad }))
       );
       setMensaje("Receta guardada.");
+      router.refresh();
     });
   }
 

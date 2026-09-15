@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { prisma } from "@/lib/prisma";
+import { listarAjustesRecientes, listarInsumosBasico, listarMovimientos } from "@/lib/inventario";
 import { toFechaCalendario } from "@/lib/fechas";
 import { formatearCantidadLegible, formatearCostoUnitarioLegible } from "@/lib/formato";
 import { PageHeader } from "@/components/page-header";
@@ -15,8 +15,6 @@ import {
 } from "@/components/ui/table";
 import { AjusteForm } from "./ajuste-form";
 import { RecalcularButton } from "./recalcular-button";
-
-const TAMANO_PAGINA = 50;
 
 const ETIQUETA_TIPO = {
   saldo_inicial: "Saldo inicial",
@@ -39,29 +37,11 @@ export default async function InventarioPage(props: PageProps<"/inventario">) {
     typeof searchParams.insumo === "string" ? Number(searchParams.insumo) : null;
   const pagina = typeof searchParams.pagina === "string" ? Math.max(1, Number(searchParams.pagina)) : 1;
 
-  const [insumos, totalMovimientos, movimientos, ajustes] = await Promise.all([
-    prisma.insumo.findMany({
-      orderBy: { nombre: "asc" },
-      select: { id: true, nombre: true, unidadBase: true },
-    }),
-    prisma.movimientoInventario.count({
-      where: insumoIdParam ? { insumoId: insumoIdParam } : undefined,
-    }),
-    prisma.movimientoInventario.findMany({
-      where: insumoIdParam ? { insumoId: insumoIdParam } : undefined,
-      include: { insumo: { select: { nombre: true, unidadBase: true } } },
-      orderBy: [{ fecha: "desc" }, { secuencia: "desc" }, { id: "desc" }],
-      skip: (pagina - 1) * TAMANO_PAGINA,
-      take: TAMANO_PAGINA,
-    }),
-    prisma.ajusteInventario.findMany({
-      include: { insumo: { select: { nombre: true, unidadBase: true } }, usuario: true },
-      orderBy: { fecha: "desc" },
-      take: 20,
-    }),
+  const [insumos, { movimientos, totalPaginas }, ajustes] = await Promise.all([
+    listarInsumosBasico(),
+    listarMovimientos(insumoIdParam, pagina),
+    listarAjustesRecientes(),
   ]);
-
-  const totalPaginas = Math.max(1, Math.ceil(totalMovimientos / TAMANO_PAGINA));
 
   return (
     <div>
@@ -173,7 +153,7 @@ export default async function InventarioPage(props: PageProps<"/inventario">) {
                 </TableRow>
               ) : (
                 movimientos.map((m) => (
-                  <TableRow key={m.id.toString()}>
+                  <TableRow key={m.id}>
                     <TableCell className="font-mono text-xs">{toFechaCalendario(m.fecha)}</TableCell>
                     <TableCell className="font-medium">{m.insumo.nombre}</TableCell>
                     <TableCell>

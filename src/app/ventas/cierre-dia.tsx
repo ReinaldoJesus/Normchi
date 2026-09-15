@@ -30,7 +30,7 @@ import {
   marcarDiaSinOperacion,
   reabrirDia,
   type ResumenCierreDia,
-} from "./actions";
+} from "@/lib/api/ventas";
 import { ResumenDia } from "./resumen-dia";
 
 export interface ProductoCierre {

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatearPesos } from "@/lib/formato";
-import { recibirCompra } from "./actions";
+import { recibirCompra } from "@/lib/api/compras";
 
 export interface LineaParaRecibir {
   compraLineaId: number;

@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { prisma } from "@/lib/prisma";
-import { toFechaCalendario, fechaLocalAhora } from "@/lib/fechas";
-import { calcularCostoTeoricoPorProducto } from "@/lib/costeoActual";
+import { fechaLocalAhora } from "@/lib/fechas";
+import { listarHistorialVentas } from "@/lib/services/ventas";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,49 +25,7 @@ export default async function HistorialVentasPage(
   const hoy = fechaLocalAhora();
   const mes = typeof searchParams.mes === "string" ? searchParams.mes : hoy.slice(0, 7);
 
-  const inicioMes = new Date(`${mes}-01T00:00:00Z`);
-  const finMes = new Date(inicioMes);
-  finMes.setUTCMonth(finMes.getUTCMonth() + 1);
-
-  const [ventas, diasCierre, costoTeoricoPorProducto] = await Promise.all([
-    prisma.venta.findMany({
-      where: { fecha: { gte: inicioMes, lt: finMes } },
-      include: { lineas: { include: { producto: { select: { categoria: true } } } } },
-      orderBy: { fecha: "desc" },
-    }),
-    prisma.diaCierre.findMany({
-      where: { fecha: { gte: inicioMes, lt: finMes } },
-    }),
-    calcularCostoTeoricoPorProducto(),
-  ]);
-
-  const filas = ventas.map((v) => {
-    let unidadesComida = 0;
-    let unidadesBebida = 0;
-    let ingreso = 0;
-    let margen = 0;
-    for (const l of v.lineas) {
-      const cantidad = Number(l.cantidad);
-      const ingresoLinea = cantidad * Number(l.precioUnitario);
-      const costoLinea = cantidad * (costoTeoricoPorProducto.get(l.productoId) ?? 0);
-      ingreso += ingresoLinea;
-      margen += ingresoLinea - costoLinea;
-      if (l.producto.categoria === "bebida") unidadesBebida += cantidad;
-      else unidadesComida += cantidad;
-    }
-    return {
-      id: v.id,
-      fecha: toFechaCalendario(v.fecha),
-      canal: v.canal,
-      unidadesComida,
-      unidadesBebida,
-      ingreso,
-      margen,
-    };
-  });
-
-  const fechasRegistradas = new Set(ventas.map((v) => toFechaCalendario(v.fecha)));
-  const fechasCierre = new Set(diasCierre.map((d) => toFechaCalendario(d.fecha)));
+  const { filas, fechasRegistradas, fechasCierre } = await listarHistorialVentas(mes);
 
   return (
     <div>
@@ -86,8 +43,8 @@ export default async function HistorialVentasPage(
       <CalendarioRegistro
         mes={mes}
         hoy={hoy}
-        fechasRegistradas={fechasRegistradas}
-        fechasCierre={fechasCierre}
+        fechasRegistradas={new Set(fechasRegistradas)}
+        fechasCierre={new Set(fechasCierre)}
       />
 
       <div className="mt-6 overflow-x-auto rounded-xl border">

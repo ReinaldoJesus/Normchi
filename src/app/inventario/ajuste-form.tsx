@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { fechaLocalAhora } from "@/lib/fechas";
 import { MOTIVOS_AJUSTE } from "@/lib/validaciones/ajuste";
-import { crearAjuste } from "./actions";
+import { crearAjuste } from "@/lib/api/inventario";
 
 const ETIQUETA_MOTIVO: Record<(typeof MOTIVOS_AJUSTE)[number], string> = {
   conteo_fisico: "Conteo físico",

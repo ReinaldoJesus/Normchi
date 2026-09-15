@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ import {
   actualizarProducto,
   crearProducto,
   type EstadoFormularioProducto,
-} from "./actions";
+} from "@/lib/api/productos";
 
 export interface ProductoParaEditar {
   id: number;
@@ -49,6 +50,7 @@ export function ProductoForm({
   producto?: ProductoParaEditar;
   trigger?: React.ReactNode;
 }) {
+  const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [estado, setEstado] = useState<EstadoFormularioProducto>({ ok: false });
   const [enviando, startTransition] = useTransition();
@@ -62,7 +64,10 @@ export function ProductoForm({
         ? await actualizarProducto(producto!.id, estado, formData)
         : await crearProducto(estado, formData);
       setEstado(resultado);
-      if (resultado.ok) setAbierto(false);
+      if (resultado.ok) {
+        setAbierto(false);
+        router.refresh();
+      }
     });
   }
 

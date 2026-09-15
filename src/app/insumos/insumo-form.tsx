@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -24,26 +25,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CATEGORIAS_INSUMO_SUGERIDAS, UNIDADES_BASE } from "@/lib/validaciones/insumo";
-import { actualizarInsumo, crearInsumo, type EstadoFormularioInsumo } from "./actions";
+import { actualizarInsumo, crearInsumo, type EstadoFormularioInsumo } from "@/lib/api/insumos";
+import type { InsumoParaEditar } from "@/lib/services/insumos";
 
-export interface InsumoParaEditar {
-  id: number;
-  codigo: string;
-  nombre: string;
-  categoria: string;
-  unidadBase: string;
-  unidadCompra: string;
-  factorConversion: string;
-  mermaPct: string;
-  stockSeguridad: string;
-  loteMinimoCompra: string;
-  leadTimeDias: number;
-  proveedorId: number | null;
-  perecible: boolean;
-  stockInicial: string;
-  costoInicial: string;
-  tieneMovimientos: boolean;
-}
+export type { InsumoParaEditar };
 
 export function InsumoForm({
   proveedores,
@@ -54,6 +39,7 @@ export function InsumoForm({
   insumo?: InsumoParaEditar;
   trigger?: React.ReactNode;
 }) {
+  const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [estado, setEstado] = useState<EstadoFormularioInsumo>({ ok: false });
   const [enviando, startTransition] = useTransition();
@@ -66,7 +52,10 @@ export function InsumoForm({
         ? await actualizarInsumo(insumo!.id, estado, formData)
         : await crearInsumo(estado, formData);
       setEstado(resultado);
-      if (resultado.ok) setAbierto(false);
+      if (resultado.ok) {
+        setAbierto(false);
+        router.refresh();
+      }
     });
   }
 

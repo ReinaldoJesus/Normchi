@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { prisma } from "@/lib/prisma";
+import { obtenerCompra, listarInsumosParaCompra } from "@/lib/services/compras";
 import { fechaLocalAhora, toFechaCalendario } from "@/lib/fechas";
 import { formatearPesos } from "@/lib/formato";
 import { PageHeader } from "@/components/page-header";
@@ -35,19 +35,9 @@ export default async function CompraDetallePage(
   const compraId = Number(id);
   if (!Number.isInteger(compraId)) notFound();
 
-  const compra = await prisma.compra.findUnique({
-    where: { id: compraId },
-    include: {
-      proveedor: true,
-      lineas: { include: { insumo: true } },
-    },
-  });
-  if (!compra) notFound();
-
-  const total = compra.lineas.reduce(
-    (acc, l) => acc + Number(l.cantidadCompra) * Number(l.precioUnitarioCompra),
-    0
-  );
+  const datos = await obtenerCompra(compraId);
+  if (!datos) notFound();
+  const { compra, total } = datos;
 
   return (
     <div>
@@ -85,11 +75,7 @@ export default async function CompraDetallePage(
               leadTimeDias: compra.proveedor.leadTimeDias,
             },
           ]}
-          insumos={await prisma.insumo.findMany({
-            where: { activo: true },
-            orderBy: { nombre: "asc" },
-            select: { id: true, nombre: true, unidadCompra: true },
-          })}
+          insumos={await listarInsumosParaCompra()}
           fechaHoy={fechaLocalAhora()}
           compraExistente={{
             id: compra.id,

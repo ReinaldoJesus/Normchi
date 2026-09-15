@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Pencil, Search } from "lucide-react";
 
+import { BotonCambiarEstado } from "@/components/boton-cambiar-estado";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,28 +27,11 @@ import {
   formatearCostoUnitarioLegible,
   formatearPesos,
 } from "@/lib/formato";
-import { cambiarEstadoInsumo } from "./actions";
-import { InsumoForm, type InsumoParaEditar } from "./insumo-form";
+import { cambiarEstadoInsumo } from "@/lib/api/insumos";
+import type { EstadoInsumo, FilaInsumo } from "@/lib/services/insumos";
+import { InsumoForm } from "./insumo-form";
 
-export type EstadoInsumo = "verde" | "ambar" | "negro";
-
-export interface FilaInsumo {
-  id: number;
-  codigo: string;
-  nombre: string;
-  categoria: string;
-  unidadBase: "g" | "ml" | "un";
-  unidadCompra: string;
-  stockActual: number;
-  stockSeguridad: number;
-  costoMedio: number;
-  valorBodega: number;
-  proveedorId: number | null;
-  proveedorNombre: string | null;
-  estado: EstadoInsumo;
-  activo: boolean;
-  form: InsumoParaEditar;
-}
+export type { EstadoInsumo, FilaInsumo };
 
 const ESTADO_TODOS = "todos";
 const SIN_PROVEEDOR = "__sin_proveedor__";
@@ -232,7 +216,10 @@ export function InsumosTable({
                           </Button>
                         }
                       />
-                      <BotonEstado id={f.id} activo={f.activo} />
+                      <BotonCambiarEstado
+                        activo={f.activo}
+                        onCambiar={() => cambiarEstadoInsumo(f.id, !f.activo)}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -242,15 +229,5 @@ export function InsumosTable({
         </Table>
       </div>
     </div>
-  );
-}
-
-function BotonEstado({ id, activo }: { id: number; activo: boolean }) {
-  return (
-    <form action={cambiarEstadoInsumo.bind(null, id, !activo)}>
-      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" type="submit">
-        {activo ? "Desactivar" : "Activar"}
-      </Button>
-    </form>
   );
 }

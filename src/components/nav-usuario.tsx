@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { cerrarSesionAction } from "@/lib/auth-actions";
+import { cerrarSesion } from "@/lib/api/auth";
 import { ETIQUETAS_ROL, type RolUsuario } from "@/lib/validaciones/usuario";
 import type { SesionUsuario } from "@/lib/sesion";
 
@@ -23,7 +24,16 @@ function iniciales(nombre: string): string {
 }
 
 export function NavUsuario({ sesion }: { sesion: SesionUsuario }) {
+  const router = useRouter();
   const [saliendo, startTransition] = useTransition();
+
+  function salir() {
+    startTransition(async () => {
+      await cerrarSesion();
+      router.push("/login");
+      router.refresh();
+    });
+  }
 
   return (
     <SidebarMenu>
@@ -47,10 +57,7 @@ export function NavUsuario({ sesion }: { sesion: SesionUsuario }) {
               {ETIQUETAS_ROL[sesion.rol as RolUsuario]}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              disabled={saliendo}
-              onSelect={() => startTransition(() => cerrarSesionAction())}
-            >
+            <DropdownMenuItem disabled={saliendo} onSelect={salir}>
               <LogOut />
               {saliendo ? "Cerrando sesión…" : "Cerrar sesión"}
             </DropdownMenuItem>

@@ -4,8 +4,8 @@ import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
-import { prisma } from "@/lib/prisma";
 import { obtenerSesion } from "@/lib/auth";
+import { listarUsuarios } from "@/lib/services/usuarios";
 import { UsuarioForm } from "./usuario-form";
 import { UsuariosTable, type FilaUsuario } from "./usuarios-table";
 
@@ -13,7 +13,7 @@ export default async function UsuariosPage() {
   const sesion = await obtenerSesion();
   if (!sesion || sesion.rol !== "admin") redirect("/");
 
-  const usuarios = await prisma.usuario.findMany({ orderBy: { creadoEn: "asc" } });
+  const usuarios = await listarUsuarios();
 
   const filas: FilaUsuario[] = usuarios.map((u) => ({
     id: u.id,

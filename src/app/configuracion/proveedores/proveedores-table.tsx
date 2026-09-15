@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react";
 
+import { BotonCambiarEstado } from "@/components/boton-cambiar-estado";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -11,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cambiarEstadoProveedor } from "./actions";
+import { cambiarEstadoProveedor } from "@/lib/api/proveedores";
 import { ProveedorForm, type ProveedorParaEditar } from "./proveedor-form";
 
 export interface FilaProveedor {
@@ -69,11 +70,10 @@ export function ProveedoresTable({ filas }: { filas: FilaProveedor[] }) {
                         </Button>
                       }
                     />
-                    <form action={cambiarEstadoProveedor.bind(null, f.id, !f.activo)}>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" type="submit">
-                        {f.activo ? "Desactivar" : "Activar"}
-                      </Button>
-                    </form>
+                    <BotonCambiarEstado
+                      activo={f.activo}
+                      onCambiar={() => cambiarEstadoProveedor(f.id, !f.activo)}
+                    />
                   </div>
                 </TableCell>
               </TableRow>

@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatearCantidad, formatearPesos } from "@/lib/formato";
-import { generarOrdenDesdeSugerencia } from "./actions";
+import { generarOrdenDesdeSugerencia } from "@/lib/api/planificacion";
 
 export interface LineaMrp {
   insumoId: number;

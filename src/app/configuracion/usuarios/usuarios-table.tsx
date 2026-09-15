@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react";
 
+import { BotonCambiarEstado } from "@/components/boton-cambiar-estado";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ETIQUETAS_ROL, type RolUsuario } from "@/lib/validaciones/usuario";
-import { cambiarEstadoUsuario } from "./actions";
+import { cambiarEstadoUsuario } from "@/lib/api/usuarios";
 import { UsuarioForm, type UsuarioParaEditar } from "./usuario-form";
 
 export interface FilaUsuario {
@@ -73,11 +74,10 @@ export function UsuariosTable({ filas }: { filas: FilaUsuario[] }) {
                       }
                     />
                     {!f.esUsuarioActual ? (
-                      <form action={cambiarEstadoUsuario.bind(null, f.id, !f.activo)}>
-                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" type="submit">
-                          {f.activo ? "Desactivar" : "Activar"}
-                        </Button>
-                      </form>
+                      <BotonCambiarEstado
+                        activo={f.activo}
+                        onCambiar={() => cambiarEstadoUsuario(f.id, !f.activo)}
+                      />
                     ) : null}
                   </div>
                 </TableCell>

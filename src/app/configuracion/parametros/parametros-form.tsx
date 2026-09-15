@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { ParametrosApp } from "@/lib/parametros";
-import { guardarParametros, type EstadoFormularioParametros } from "./actions";
+import { guardarParametros, type EstadoFormularioParametros } from "@/lib/api/parametros";
 
 const DIAS_SEMANA = [
   { valor: 1, etiqueta: "Lunes" },
@@ -23,6 +24,7 @@ const DIAS_SEMANA = [
 ];
 
 export function ParametrosForm({ parametros }: { parametros: ParametrosApp }) {
+  const router = useRouter();
   const [estado, setEstado] = useState<EstadoFormularioParametros>({ ok: false });
   const [preciosIncluyenIva, setPreciosIncluyenIva] = useState(parametros.preciosIncluyenIva);
   const [diasOperacion, setDiasOperacion] = useState(new Set(parametros.diasOperacionSemana));
@@ -36,6 +38,7 @@ export function ParametrosForm({ parametros }: { parametros: ParametrosApp }) {
       setEstado(resultado);
       if (resultado.ok) {
         setGuardadoRecien(true);
+        router.refresh();
         setTimeout(() => setGuardadoRecien(false), 2500);
       }
     });

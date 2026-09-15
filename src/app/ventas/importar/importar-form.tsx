@@ -12,7 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { importarVentasCsv, type FilaCsvVenta, type ResultadoImportacionCsv } from "./actions";
+import {
+  importarVentasCsv,
+  type FilaCsvVenta,
+  type ResultadoImportacionCsv,
+} from "@/lib/api/ventas";
 
 function parseCsv(texto: string): string[][] {
   return texto

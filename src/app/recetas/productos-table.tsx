@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChevronRight, Pencil } from "lucide-react";
 
+import { BotonCambiarEstado } from "@/components/boton-cambiar-estado";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { formatearPesos, formatearPorcentaje } from "@/lib/formato";
 import type { SemaforoFoodCost } from "@/lib/motor/recetas";
-import { cambiarEstadoProducto } from "./actions";
+import { cambiarEstadoProducto } from "@/lib/api/productos";
 import { ProductoForm, type ProductoParaEditar } from "./producto-form";
 
 export interface FilaProducto {
@@ -111,11 +112,10 @@ export function ProductosTable({ filas }: { filas: FilaProducto[] }) {
                         <ChevronRight className="size-3.5" />
                       </Link>
                     </Button>
-                    <form action={cambiarEstadoProducto.bind(null, f.id, !f.activo)}>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" type="submit">
-                        {f.activo ? "Desactivar" : "Activar"}
-                      </Button>
-                    </form>
+                    <BotonCambiarEstado
+                      activo={f.activo}
+                      onCambiar={() => cambiarEstadoProducto(f.id, !f.activo)}
+                    />
                   </div>
                 </TableCell>
               </TableRow>

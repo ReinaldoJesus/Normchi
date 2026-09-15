@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { enviarCompra } from "./actions";
+import { enviarCompra } from "@/lib/api/compras";
 
 export function EnviarButton({ compraId }: { compraId: number }) {
   const router = useRouter();

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { recalcularInventarioManual } from "./actions";
+import { recalcularInventarioManual } from "@/lib/api/inventario";
 
 export function RecalcularButton() {
   const router = useRouter();
