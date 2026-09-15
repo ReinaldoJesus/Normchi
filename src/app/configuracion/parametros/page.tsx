@@ -1,12 +1,17 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { obtenerParametros } from "@/lib/parametros";
+import { obtenerSesion } from "@/lib/auth";
 import { ParametrosForm } from "./parametros-form";
 
 export default async function ParametrosPage() {
+  const sesion = await obtenerSesion();
+  if (!sesion || sesion.rol !== "admin") redirect("/");
+
   const parametros = await obtenerParametros();
 
   return (

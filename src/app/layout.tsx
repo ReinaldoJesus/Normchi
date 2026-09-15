@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { obtenerSesion } from "@/lib/auth";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -19,7 +20,9 @@ export const metadata: Metadata = {
   description: "Costos, inventario y planificación para restaurantes",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const sesion = await obtenerSesion();
+
   return (
     <html
       lang="es"
@@ -27,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <TooltipProvider delayDuration={200}>
-          <AppShell>{children}</AppShell>
+          <AppShell sesion={sesion}>{children}</AppShell>
         </TooltipProvider>
       </body>
     </html>

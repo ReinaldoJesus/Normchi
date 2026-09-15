@@ -36,7 +36,7 @@ Las Fases 1 a 3 del plan de entrega (§10 de la especificación) están
 | Planificación (pronóstico de demanda, MRP, carga de cocina) | ✅ | `/planificacion` |
 | Reportería (menu engineering, gasto en compras, márgenes, utilidad proyectada) | ✅ | `/reportes` |
 | Parámetros del sistema (IVA, horizonte, capacidad de cocina, etc. — editables sin tocar código) | ✅ | `/configuracion/parametros` |
-| Usuarios / login real | ❌ pendiente (ver más abajo) | — |
+| Login y gestión de usuarios (roles admin/compras/cocina/cajero/lectura) | ✅ | `/login`, `/configuracion/usuarios` |
 
 Toda la lógica de negocio normativa de la especificación (§6: conversión de
 unidades, costo medio móvil ponderado, ledger, backflush, costeo de recetas,
@@ -46,14 +46,14 @@ proyectada) está implementada como **funciones puras y testeadas** en
 
 ### Pendiente / fuera de alcance por ahora
 
-- **Login real.** La infraestructura de autenticación ya existe
-  (`src/lib/auth.ts` con JWT/`jose`, `src/lib/senas.ts` con `bcryptjs`, modelo
-  `Usuario` en el schema), pero no hay pantalla de login todavía porque el
-  dueño pidió explícitamente dejarlo para después ("es uso local, primero").
-  Mientras tanto, `src/lib/usuarioActual.ts` (`obtenerUsuarioActualId()`)
-  devuelve el primer usuario activo de la tabla — es un **placeholder
-  temporal** usado en todos los campos de auditoría/`usuarioId`. El seed
-  (`npm run seed`) crea ese usuario admin inicial.
+- **Permisos granulares por rol.** El modelo `Rol` (admin/compras/cocina/
+  cajero/lectura) existe y el login ya lo guarda en la sesión, pero solo se
+  aplica una regla de acceso real hoy: `/configuracion/usuarios` y
+  `/configuracion/parametros` son exclusivos de `admin` (redirige a `/` si
+  no lo eres). La matriz de permisos completa por módulo descrita en la
+  especificación (§5.2 — p. ej. `cocina` solo debería tocar recetas y
+  ajustes) **no** está enforced todavía: cualquier usuario autenticado puede
+  usar el resto de los módulos sin importar su rol.
 - **Configuración → Respaldo.** Mencionado en la navegación de la
   especificación (§7.1) pero no desarrollado; hoy el respaldo es manual
   (`pg_dump`).
@@ -76,9 +76,12 @@ proyectada) está implementada como **funciones puras y testeadas** en
   `src/lib/prisma.ts` vía `@prisma/adapter-pg` (driver adapter a Postgres).
 - **PostgreSQL local vía Homebrew**, sin Docker, sin nube. Ver sección de
   puesta en marcha.
-- **Autenticación propia** (sin proveedores externos): `bcryptjs` +
-  `jose`/JWT en cookie. Construida pero no conectada a UI todavía (ver
-  "Pendiente" arriba).
+- **Autenticación propia** (sin proveedores externos): `bcryptjs` para el
+  hash de contraseña, `jose`/JWT en una cookie httpOnly para la sesión. La
+  firma/verificación del token vive en `src/lib/sesion.ts` (sin
+  `next/headers`, así la puede usar tanto `src/lib/auth.ts` como
+  `src/proxy.ts`, que corren en bundles distintos). El proxy protege toda la
+  app: sin sesión válida, redirige a `/login`.
 - **Capa "motor" (`src/lib/motor/`)**: toda la matemática de negocio —
   conversión de unidades, costo medio móvil, reconstrucción del ledger,
   backflush, costeo de recetas, pronóstico (Holt-Winters simplificado), MRP,
@@ -132,17 +135,17 @@ cp .env.example .env
 npm install
 npx prisma migrate dev
 
-# 4. Usuario inicial (necesario: hoy no hay login, pero el sistema necesita
-#    al menos un usuario activo para los campos de auditoría — ver más arriba)
+# 4. Usuario administrador inicial
 npm run seed
 
 # 5. Levantar la app
 npm run dev
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000). Verás la guía de tres
-pasos (cargar insumos → cargar recetas → registrar la primera venta) si la
-base está vacía.
+Abrir [http://localhost:3000](http://localhost:3000) — te pedirá iniciar
+sesión. Usa `admin@normchi.local` / `cambiar123` (cámbiala luego desde
+Configuración → Usuarios) y verás la guía de tres pasos (cargar insumos →
+cargar recetas → registrar la primera venta) si la base está vacía.
 
 ## Scripts
 
@@ -164,8 +167,8 @@ Next.js 16 (App Router) + TypeScript estricto · Tailwind v4 + shadcn/ui
 (preset Nova: Lucide + Geist) · Prisma 7 sobre PostgreSQL local (driver
 adapter `@prisma/adapter-pg`, sin motor Rust) · Zod para validación · Recharts
 para gráficos · `date-fns` / `date-fns-tz` para fechas · `decimal.js` para
-montos · `bcryptjs` + `jose` para auth (infraestructura lista, sin UI de login
-aún) · Vitest para tests.
+montos · `bcryptjs` + `jose` para auth propia (login + sesión por cookie) ·
+Vitest para tests.
 
 ## Estructura del proyecto
 
@@ -174,6 +177,7 @@ normchi-especificacion.md   Especificación funcional — fuente de verdad
 prisma/
   schema.prisma              Modelo de datos completo
   seed.ts                    Crea el usuario admin inicial
+src/proxy.ts                 Protege toda la app: sin sesión, redirige a /login
 src/lib/
   motor/                     Lógica de negocio pura + tests (unidades, costo
                              medio, ledger, backflush, recetas, pronóstico,
@@ -183,13 +187,19 @@ src/lib/
   planificacion.ts           Series históricas para el pronóstico
   reportes.ts                Consultas agregadas para /reportes
   fechas.ts                  toFechaLocal vs toFechaCalendario (ver arriba)
-  auth.ts / senas.ts         Auth propia (JWT + bcrypt) — lista, sin UI aún
-  usuarioActual.ts           Placeholder temporal mientras no hay login
+  sesion.ts                  Firma/verifica el JWT — sin next/headers, la usa
+                             también el proxy
+  auth.ts / senas.ts         Sesión (cookie) + hash de contraseña
+  usuarioActual.ts           Id del usuario autenticado (para auditoría)
 src/app/
+  login/                     Pantalla de login
   insumos/ recetas/ compras/ ventas/ inventario/
   planificacion/ reportes/ configuracion/    Una carpeta por módulo (Next.js
                                               App Router: page.tsx + acciones
-                                              de servidor + componentes)
+                                              de servidor + componentes);
+                                              configuracion/usuarios y
+                                              configuracion/parametros exigen
+                                              rol admin
 ```
 
 ## Si retomas esto sin este contexto
@@ -198,7 +208,7 @@ src/app/
    normativo, no una sugerencia.
 2. Corre `npx tsc --noEmit && npm run lint && npm test` primero para
    confirmar que partes de una base sana.
-3. Lo próximo que probablemente falte, en orden de prioridad: pantalla de
-   login (ya hay infraestructura en `auth.ts`/`senas.ts`, solo falta la UI y
-   conectar `obtenerUsuarioActualId()` a la sesión real), Configuración →
-   Respaldo, y el seed de datos de demostración de la §8.
+3. Lo próximo que probablemente falte, en orden de prioridad: permisos
+   granulares por rol en cada módulo (§5.2 — hoy solo Usuarios/Parámetros
+   están restringidos a admin), Configuración → Respaldo, y el seed de datos
+   de demostración de la §8.

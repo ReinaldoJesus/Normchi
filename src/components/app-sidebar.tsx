@@ -24,7 +24,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { NavUsuario } from "@/components/nav-usuario";
+import type { SesionUsuario } from "@/lib/sesion";
 
 const NAV = [
   { href: "/", label: "Panel", icon: LayoutDashboard },
@@ -37,7 +40,7 @@ const NAV = [
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
 ] as const;
 
-export function AppSidebar() {
+export function AppSidebar({ sesion }: { sesion: SesionUsuario | null }) {
   const pathname = usePathname();
 
   return (
@@ -87,6 +90,12 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        {sesion ? (
+          <>
+            <SidebarSeparator className="my-2" />
+            <NavUsuario sesion={sesion} />
+          </>
+        ) : null}
       </SidebarFooter>
     </Sidebar>
   );

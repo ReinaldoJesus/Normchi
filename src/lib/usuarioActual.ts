@@ -1,22 +1,17 @@
-import { prisma } from "./prisma";
+import "server-only";
+import { obtenerSesion } from "./auth";
 
 /**
- * Sustituto temporal mientras no existe login (§7.1 /configuracion → Usuarios,
- * aún no construido). Devuelve el primer usuario activo para poblar los
- * campos de auditoría (creado_por) y usuario_id de los ajustes de inventario.
- * Reemplazar por `obtenerSesion()` (src/lib/auth.ts) cuando exista la
- * pantalla de login.
+ * Id del usuario autenticado, para los campos de auditoría (creado_por,
+ * usuario_id de ajustes de inventario, etc.). El proxy (src/proxy.ts) ya
+ * garantiza que no se llega aquí sin sesión válida en un flujo normal de UI;
+ * este error solo debería verse si una acción de servidor se invoca fuera de
+ * ese flujo.
  */
 export async function obtenerUsuarioActualId(): Promise<string> {
-  const usuario = await prisma.usuario.findFirst({
-    where: { activo: true },
-    orderBy: { creadoEn: "asc" },
-    select: { id: true },
-  });
-  if (!usuario) {
-    throw new Error(
-      "No hay usuarios en el sistema. Ejecuta `npm run seed` para crear el usuario administrador."
-    );
+  const sesion = await obtenerSesion();
+  if (!sesion) {
+    throw new Error("No hay sesión activa.");
   }
-  return usuario.id;
+  return sesion.usuarioId;
 }
