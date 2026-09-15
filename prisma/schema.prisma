@@ -1,0 +1,308 @@
+// Normchi — modelo de datos
+// Ver normchi-especificacion.md sección 5. Esta es la fuente de verdad del dominio.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Rol {
+  admin
+  compras
+  cocina
+  cajero
+  lectura
+}
+
+enum UnidadBase {
+  g
+  ml
+  un
+}
+
+enum CategoriaProducto {
+  comida
+  bebida
+}
+
+enum EstadoCompra {
+  borrador
+  pendiente
+  recibida
+  anulada
+}
+
+enum CanalVenta {
+  salon
+  delivery
+  retiro
+}
+
+enum OrigenVenta {
+  manual
+  csv
+}
+
+enum MotivoAjuste {
+  conteo_fisico
+  merma
+  vencimiento
+  error_registro
+  otro
+}
+
+enum TipoMovimiento {
+  entrada_compra
+  consumo_venta
+  ajuste
+  saldo_inicial
+}
+
+// ---------------------------------------------------------------------------
+// Modelos
+// ---------------------------------------------------------------------------
+
+model Usuario {
+  id     String  @id @default(uuid())
+  email  String  @unique
+  nombre       String
+  /// Hash bcrypt. Autenticación propia, local — sin proveedores externos.
+  passwordHash String  @map("password_hash")
+  rol          Rol
+  activo       Boolean @default(true)
+
+  ajustesInventario AjusteInventario[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@map("usuarios")
+}
+
+model Proveedor {
+  id             Int     @id @default(autoincrement())
+  nombre         String
+  contacto       String?
+  telefono       String?
+  email          String?
+  leadTimeDias   Int     @default(3) @map("lead_time_dias")
+  condicionPago  String? @map("condicion_pago")
+  activo         Boolean @default(true)
+
+  insumos Insumo[]
+  compras Compra[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@map("proveedores")
+}
+
+model Insumo {
+  id                 Int        @id @default(autoincrement())
+  codigo             String     @unique
+  nombre             String
+  categoria          String
+  unidadBase         UnidadBase @map("unidad_base")
+  unidadCompra       String     @map("unidad_compra")
+  factorConversion   Decimal    @map("factor_conversion") @db.Decimal(14, 6)
+  mermaPct           Decimal    @default(0) @map("merma_pct") @db.Decimal(5, 4)
+  stockSeguridad     Decimal    @default(0) @map("stock_seguridad") @db.Decimal(14, 4)
+  loteMinimoCompra   Decimal    @default(1) @map("lote_minimo_compra") @db.Decimal(14, 4)
+  leadTimeDias       Int        @map("lead_time_dias")
+  proveedorId        Int?       @map("proveedor_id")
+  proveedor          Proveedor? @relation(fields: [proveedorId], references: [id])
+  perecible          Boolean    @default(false)
+  stockInicial       Decimal    @default(0) @map("stock_inicial") @db.Decimal(14, 4)
+  costoInicial       Decimal    @default(0) @map("costo_inicial") @db.Decimal(14, 4)
+  activo             Boolean    @default(true)
+  esDemo             Boolean    @default(false) @map("es_demo")
+
+  recetaLineas         RecetaLinea[]
+  compraLineas         CompraLinea[]
+  movimientosInventario MovimientoInventario[]
+  ajustesInventario     AjusteInventario[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@map("insumos")
+}
+
+model Producto {
+  id                    Int               @id @default(autoincrement())
+  codigo                String            @unique
+  nombre                String
+  categoria             CategoriaProducto
+  subcategoria          String?
+  esReventa             Boolean           @default(false) @map("es_reventa")
+  precioVenta           Decimal           @map("precio_venta") @db.Decimal(14, 4)
+  tiempoPreparacionMin  Decimal           @map("tiempo_preparacion_min") @db.Decimal(6, 2)
+  estacion              String?
+  activo                Boolean           @default(true)
+  esDemo                Boolean           @default(false) @map("es_demo")
+
+  recetaLineas RecetaLinea[]
+  ventaLineas  VentaLinea[]
+  forecastOverrides ForecastOverride[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@map("productos")
+}
+
+model RecetaLinea {
+  id         Int    @id @default(autoincrement())
+  productoId Int    @map("producto_id")
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  insumoId   Int    @map("insumo_id")
+  insumo     Insumo   @relation(fields: [insumoId], references: [id])
+  cantidad   Decimal  @db.Decimal(14, 6)
+  nota       String?
+
+  @@unique([productoId, insumoId])
+  @@map("receta_lineas")
+}
+
+model Compra {
+  id             Int          @id @default(autoincrement())
+  folio          String       @unique
+  proveedorId    Int          @map("proveedor_id")
+  proveedor      Proveedor    @relation(fields: [proveedorId], references: [id])
+  fechaEmision   DateTime     @map("fecha_emision") @db.Date
+  fechaEsperada  DateTime     @map("fecha_esperada") @db.Date
+  fechaRecepcion DateTime?    @map("fecha_recepcion") @db.Date
+  estado         EstadoCompra @default(borrador)
+  documento      String?
+  nota           String?
+  anulado        Boolean      @default(false)
+  anuladoMotivo  String?      @map("anulado_motivo")
+
+  lineas CompraLinea[]
+
+  creadoPor     String?
+  creadoEn      DateTime @default(now())
+  actualizadoPor String?
+  actualizadoEn DateTime @updatedAt
+
+  @@map("compras")
+}
+
+model CompraLinea {
+  id                       Int      @id @default(autoincrement())
+  compraId                 Int      @map("compra_id")
+  compra                   Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  insumoId                 Int      @map("insumo_id")
+  insumo                   Insumo   @relation(fields: [insumoId], references: [id])
+  cantidadCompra           Decimal  @map("cantidad_compra") @db.Decimal(14, 4)
+  precioUnitarioCompra     Decimal  @map("precio_unitario_compra") @db.Decimal(14, 4)
+  cantidadRecibidaCompra   Decimal? @map("cantidad_recibida_compra") @db.Decimal(14, 4)
+
+  @@map("compra_lineas")
+}
+
+model Venta {
+  id     Int         @id @default(autoincrement())
+  fecha  DateTime    @db.Date
+  canal  CanalVenta
+  origen OrigenVenta @default(manual)
+  nota   String?
+
+  lineas VentaLinea[]
+
+  creadoPor String?
+  creadoEn  DateTime @default(now())
+
+  @@map("ventas")
+}
+
+model VentaLinea {
+  id             Int      @id @default(autoincrement())
+  ventaId        Int      @map("venta_id")
+  venta          Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  productoId     Int      @map("producto_id")
+  producto       Producto @relation(fields: [productoId], references: [id])
+  cantidad       Decimal  @db.Decimal(14, 4)
+  precioUnitario Decimal  @map("precio_unitario") @db.Decimal(14, 4)
+
+  @@map("venta_lineas")
+}
+
+model DiaCierre {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @unique @db.Date
+  motivo    String?
+  usuarioId String?  @map("usuario_id")
+
+  creadoEn DateTime @default(now())
+
+  @@map("dias_cierre")
+}
+
+model AjusteInventario {
+  id             Int          @id @default(autoincrement())
+  fecha          DateTime     @db.Date
+  insumoId       Int          @map("insumo_id")
+  insumo         Insumo       @relation(fields: [insumoId], references: [id])
+  cantidadDelta  Decimal      @map("cantidad_delta") @db.Decimal(14, 4)
+  motivo         MotivoAjuste
+  nota           String?
+  usuarioId      String       @map("usuario_id")
+  usuario        Usuario      @relation(fields: [usuarioId], references: [id])
+
+  creadoEn DateTime @default(now())
+
+  @@map("ajustes_inventario")
+}
+
+/// Ledger derivado, reconstruible desde cero por `recalcularLedger` (src/lib/motor/ledger.ts).
+model MovimientoInventario {
+  id                   BigInt         @id @default(autoincrement())
+  fecha                DateTime       @db.Date
+  secuencia            Int
+  insumoId             Int            @map("insumo_id")
+  insumo               Insumo         @relation(fields: [insumoId], references: [id])
+  tipo                 TipoMovimiento
+  origenTabla          String         @map("origen_tabla")
+  origenId              BigInt        @map("origen_id")
+  cantidad             Decimal        @db.Decimal(14, 4)
+  costoUnitario        Decimal        @map("costo_unitario") @db.Decimal(14, 4)
+  costoMedioResultante Decimal        @map("costo_medio_resultante") @db.Decimal(14, 4)
+  stockResultante      Decimal        @map("stock_resultante") @db.Decimal(14, 4)
+
+  creadoEn DateTime @default(now())
+
+  @@index([insumoId, fecha, secuencia])
+  @@map("movimientos_inventario")
+}
+
+model ForecastOverride {
+  id         Int      @id @default(autoincrement())
+  productoId Int      @map("producto_id")
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  fecha      DateTime @db.Date
+  cantidad   Decimal  @db.Decimal(14, 4)
+  motivo     String?
+
+  creadoEn DateTime @default(now())
+
+  @@unique([productoId, fecha])
+  @@map("forecast_overrides")
+}
+
+/// Tabla clave-valor tipada. Ver sección 5.2 de la especificación para los valores por defecto.
+model Parametro {
+  clave String @id
+  valor String
+
+  @@map("parametros")
+}
