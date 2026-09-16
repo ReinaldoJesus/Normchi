@@ -205,14 +205,19 @@ npx prisma migrate dev
 # 4. Usuario administrador inicial
 npm run seed
 
+# 4b. (Opcional) Catálogo real: insumos + productos + recetas del menú
+npm run seed:menu
+
 # 5. Levantar la app
 npm run dev
 ```
 
 Abrir [http://localhost:3000](http://localhost:3000) — te pedirá iniciar
 sesión. Usa `admin@normchi.local` / `cambiar123` (cámbiala luego desde
-Configuración → Usuarios) y verás la guía de tres pasos (cargar insumos →
-cargar recetas → registrar la primera venta) si la base está vacía.
+Configuración → Usuarios). Si corriste `npm run seed:menu` ya vas a ver el
+catálogo completo (pizzas, empanadas, sándwiches, acompañantes y bebidas)
+con sus recetas armadas; si no, verás la guía de tres pasos (cargar insumos
+→ cargar recetas → registrar la primera venta) porque la base está vacía.
 
 ## Scripts
 
@@ -221,6 +226,7 @@ cargar recetas → registrar la primera venta) si la base está vacía.
 - `npm test` / `npm run test:watch` — tests de la capa de motor (`src/lib/motor/`) y utilidades
 - `npm run lint` — ESLint
 - `npm run seed` — crea el usuario administrador inicial (`admin@normchi.local`, contraseña provisoria `cambiar123`)
+- `npm run seed:menu` — carga el catálogo real (`prisma/seed-menu.ts`): insumos, productos y recetas (BOM) de pizzas, empanadas, sándwiches, acompañantes y bebidas. Usa `upsert` por código — correrlo de nuevo no duplica nada, así que sirve tanto para la carga inicial en un host nuevo como para resetear el catálogo a este estado conocido.
 - `npx tsc --noEmit` — chequeo de tipos
 - `npx prisma studio` — explorador visual de la base de datos local
 - `npx prisma migrate dev` — aplica cambios de `prisma/schema.prisma`

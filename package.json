@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "seed:menu": "tsx prisma/seed-menu.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
