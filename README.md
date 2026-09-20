@@ -63,6 +63,34 @@ proyectada) está implementada como **funciones puras y testeadas** en
 - **Seed de datos de demostración** (§8: ~14 insumos, 4 proveedores, 8
   productos, 8 semanas de ventas sintéticas, etc.) — no construido. El
   `seed.ts` actual solo crea el usuario administrador inicial.
+- **Recarga del catálogo del menú desde la UI — EN PROGRESO, sin terminar.**
+  Ya existe `npm run seed:menu` (CLI, ver Scripts) y se está extrayendo su
+  lógica a `src/lib/services/menuSeed.ts` (función
+  `cargarMenuCompleto(prisma)`, deliberadamente sin `import "server-only"`
+  porque también la debe poder importar un script `tsx` plano) para
+  exponerla además como `POST /api/configuracion/seed-menu` (admin) con un
+  botón en Configuración — así se puede recargar el catálogo en el host sin
+  terminal/SSH. **Estado real ahora mismo:** el archivo
+  `src/lib/services/menuSeed.ts` ya existe con `INSUMOS`/`PRODUCTOS`/
+  `cargarMenuCompleto()`, pero **todavía no está conectado a nada**:
+  `prisma/seed-menu.ts` sigue teniendo su propia copia completa y duplicada
+  de esos mismos datos (no importa el módulo nuevo todavía), no existe la
+  ruta de API, y no existe la pantalla/botón en Configuración. Pasos que
+  faltan, en orden:
+  1. Reescribir `prisma/seed-menu.ts` como wrapper delgado: crear su propio
+     `PrismaClient`/`PrismaPg` (como ya hace), importar
+     `cargarMenuCompleto` desde `../src/lib/services/menuSeed` y borrar los
+     arrays `INSUMOS`/`PRODUCTOS` y la lógica duplicada.
+  2. Crear `src/app/api/configuracion/seed-menu/route.ts`: `POST` →
+     `exigirAdmin()` + `cargarMenuCompleto(prisma)` (usando el singleton de
+     `@/lib/prisma`), con el try/catch + `manejarErrorApi()` de siempre.
+  3. Cliente en `src/lib/api/` y una tarjeta/página nueva en
+     `/configuracion` (admin) con confirmación antes de ejecutar (es una
+     escritura masiva, aunque idempotente) y resumen del resultado
+     (insumos/productos/líneas cargados).
+  4. Verificar `npx tsc --noEmit`, `npx eslint .`, `npx vitest run`, y en el
+     navegador como admin que el botón da los mismos conteos idempotentes
+     que la CLI: 30 insumos / 22 productos / 84 líneas de receta.
 - Lo marcado **[FUERA DE ALCANCE]** en la especificación (§2): integración
   con POS/boleta electrónica, contabilidad/nómina, multi-local, trazabilidad
   por lote/FEFO, app móvil nativa.
@@ -290,8 +318,14 @@ src/app/
    normativo, no una sugerencia.
 2. Corre `npx tsc --noEmit && npm run lint && npm test` primero para
    confirmar que partes de una base sana.
-3. Lo próximo que probablemente falte, en orden de prioridad: permisos
-   granulares por rol en cada módulo (§5.2 — hoy solo Usuarios/Parámetros
-   están restringidos a admin), Configuración → Respaldo, el seed de datos
-   de demostración de la §8, y documentación OpenAPI de `/api/**` si se llega
-   a necesitar un cliente externo real.
+3. **Hay un trabajo a medio terminar ahora mismo:** exponer la recarga del
+   catálogo del menú (`npm run seed:menu`) como API + botón en Configuración.
+   Ver el detalle completo y los pasos exactos que faltan en "Pendiente / fuera
+   de alcance por ahora" más arriba (`src/lib/services/menuSeed.ts` ya existe
+   pero no está conectado a `prisma/seed-menu.ts` ni a ninguna ruta/UI
+   todavía) — termina eso antes de empezar algo nuevo.
+4. Después de eso, lo próximo que probablemente falte, en orden de
+   prioridad: permisos granulares por rol en cada módulo (§5.2 — hoy solo
+   Usuarios/Parámetros están restringidos a admin), Configuración →
+   Respaldo, el seed de datos de demostración de la §8, y documentación
+   OpenAPI de `/api/**` si se llega a necesitar un cliente externo real.
