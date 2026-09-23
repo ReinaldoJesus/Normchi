@@ -174,24 +174,34 @@ export async function obtenerEstadoInsumos(): Promise<Map<number, EstadoInsumo>>
   return mapa;
 }
 
-const TAMANO_PAGINA_MOVIMIENTOS = 50;
+export const TAMANOS_PAGINA_MOVIMIENTOS = [20, 50, 100, 200] as const;
+const TAMANO_PAGINA_MOVIMIENTOS_DEFAULT = 50;
 
 export async function listarInsumosBasico() {
   return prisma.insumo.findMany({
     orderBy: { nombre: "asc" },
-    select: { id: true, nombre: true, unidadBase: true },
+    select: { id: true, nombre: true, unidadBase: true, categoria: true },
   });
 }
 
-export async function listarMovimientos(insumoId: number | null, pagina: number) {
+export async function listarMovimientos(
+  insumoId: number | null,
+  pagina: number,
+  tamanoPagina: number = TAMANO_PAGINA_MOVIMIENTOS_DEFAULT,
+  categoria: string | null = null
+) {
+  const where = {
+    ...(insumoId ? { insumoId } : {}),
+    ...(categoria ? { insumo: { categoria } } : {}),
+  };
   const [total, movimientos] = await Promise.all([
-    prisma.movimientoInventario.count({ where: insumoId ? { insumoId } : undefined }),
+    prisma.movimientoInventario.count({ where }),
     prisma.movimientoInventario.findMany({
-      where: insumoId ? { insumoId } : undefined,
+      where,
       include: { insumo: { select: { nombre: true, unidadBase: true } } },
       orderBy: [{ fecha: "desc" }, { secuencia: "desc" }, { id: "desc" }],
-      skip: (pagina - 1) * TAMANO_PAGINA_MOVIMIENTOS,
-      take: TAMANO_PAGINA_MOVIMIENTOS,
+      skip: (pagina - 1) * tamanoPagina,
+      take: tamanoPagina,
     }),
   ]);
   // id/origenId son BigInt en la base — no serializan en JSON (API) ni cruzan
@@ -203,7 +213,7 @@ export async function listarMovimientos(insumoId: number | null, pagina: number)
   }));
   return {
     movimientos: movimientosSerializables,
-    totalPaginas: Math.max(1, Math.ceil(total / TAMANO_PAGINA_MOVIMIENTOS)),
+    totalPaginas: Math.max(1, Math.ceil(total / tamanoPagina)),
   };
 }
 
