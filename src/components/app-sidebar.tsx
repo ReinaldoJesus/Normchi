@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -47,9 +48,17 @@ export function AppSidebar({ sesion }: { sesion: SesionUsuario | null }) {
   return (
     <Sidebar>
       <SidebarHeader className="px-3 py-4">
-        <Link href="/dashboard" className="flex items-center gap-2 px-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
-            N
+        <Link href="/dashboard" className="flex items-center gap-2.5 px-2">
+          <span className="relative flex h-9 w-9 shrink-0 overflow-hidden rounded-full shadow-[0_0_0_1px_rgba(245,158,11,0.5)]">
+            <Image
+              src="/logo-mark.png"
+              alt="Normchi"
+              width={36}
+              height={36}
+              className="h-full w-full object-cover"
+              priority
+            />
+            <span className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/45 to-transparent" />
           </span>
           <span className="text-[15px] font-semibold tracking-tight">
             Normchi

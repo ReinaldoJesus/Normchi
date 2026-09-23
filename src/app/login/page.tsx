@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import { obtenerSesion } from "@/lib/auth";
@@ -13,10 +14,15 @@ export default async function LoginPage(props: PageProps<"/login">) {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center gap-2 text-center">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground">
-            N
-          </span>
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
+          <Image
+            src="/logo.png"
+            alt="Normchi"
+            width={96}
+            height={96}
+            className="rounded-2xl"
+            priority
+          />
           <h1 className="text-xl font-semibold tracking-tight">Normchi</h1>
           <p className="text-sm text-muted-foreground">Inicia sesión para continuar</p>
         </div>
