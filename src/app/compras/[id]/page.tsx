@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { AnularDialog } from "../anular-dialog";
 import { CompraForm } from "../compra-form";
+import { DuplicarButton } from "../duplicar-button";
 import { EnviarButton } from "../enviar-button";
 import { RecepcionForm } from "../recepcion-form";
 
@@ -54,6 +55,7 @@ export default async function CompraDetallePage(
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline">{ETIQUETA_ESTADO[compra.estado]}</Badge>
+            <DuplicarButton compraId={compra.id} />
             {compra.estado === "borrador" ? <EnviarButton compraId={compra.id} /> : null}
             {compra.estado !== "anulada" ? <AnularDialog compraId={compra.id} /> : null}
           </div>

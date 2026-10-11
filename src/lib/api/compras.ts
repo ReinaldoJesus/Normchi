@@ -49,6 +49,17 @@ export async function actualizarCompra(
   }
 }
 
+export async function duplicarCompra(compraId: number): Promise<ResultadoAccionCompra> {
+  try {
+    const compra = await apiFetch<{ id: number }>(`/api/compras/${compraId}/duplicar`, {
+      method: "POST",
+    });
+    return { ok: true, compraId: compra.id };
+  } catch (error) {
+    return errorComoResultado(error);
+  }
+}
+
 export async function enviarCompra(compraId: number): Promise<ResultadoAccionCompra> {
   try {
     await apiFetch(`/api/compras/${compraId}/enviar`, { method: "POST" });

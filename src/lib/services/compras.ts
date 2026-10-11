@@ -38,6 +38,12 @@ function validarLineasUnicas(lineas: CompraFormValues["lineas"]): boolean {
   return new Set(ids).size === ids.length;
 }
 
+function sumarDias(fechaISO: string, dias: number): string {
+  const d = new Date(`${fechaISO}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
 export async function listarCompras(): Promise<FilaCompra[]> {
   const compras = await prisma.compra.findMany({
     include: { proveedor: { select: { nombre: true } }, lineas: true },
@@ -97,6 +103,45 @@ export async function crearCompra(datos: CompraFormValues) {
       creadoPor: usuarioId,
       lineas: {
         create: parsed.data.lineas.map((l) => ({
+          insumoId: l.insumoId,
+          cantidadCompra: l.cantidadCompra,
+          precioUnitarioCompra: l.precioUnitarioCompra,
+        })),
+      },
+    },
+  });
+}
+
+/**
+ * Crea una nueva orden en borrador con el mismo proveedor y las mismas
+ * líneas (insumo, cantidad, precio unitario) que una compra existente —
+ * pensado para compras habituales que se repiten. Fechas se recalculan
+ * contra hoy (emisión = hoy, esperada = hoy + lead time del proveedor), no
+ * se copian las de la orden de origen. No copia `documento` (es específico
+ * de la boleta/factura original) ni `cantidadRecibidaCompra`.
+ */
+export async function duplicarCompra(compraOrigenId: number) {
+  const origen = await prisma.compra.findUnique({
+    where: { id: compraOrigenId },
+    include: { lineas: true, proveedor: { select: { leadTimeDias: true } } },
+  });
+  if (!origen) throw new ErrorApi(404, "La orden de origen ya no existe.");
+
+  const usuarioId = await obtenerUsuarioActualId();
+  const folio = await generarFolio();
+  const fechaEmision = fechaLocalAhora();
+  const fechaEsperada = sumarDias(fechaEmision, origen.proveedor.leadTimeDias);
+
+  return prisma.compra.create({
+    data: {
+      folio,
+      proveedorId: origen.proveedorId,
+      fechaEmision: new Date(fechaEmision),
+      fechaEsperada: new Date(fechaEsperada),
+      nota: origen.nota,
+      creadoPor: usuarioId,
+      lineas: {
+        create: origen.lineas.map((l) => ({
           insumoId: l.insumoId,
           cantidadCompra: l.cantidadCompra,
           precioUnitarioCompra: l.precioUnitarioCompra,
